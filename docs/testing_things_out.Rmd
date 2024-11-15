@@ -1,0 +1,263 @@
+---
+title: "Assessment"
+output: html_document
+date: "2024-11-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+## The rise of scabies in Scotland and link to socioeconomic factors
+
+Another alternative if this idea doesn't work - then another idea would be methadone prescriptions, look at over socioeconomic factors, correlations with other drugs, drug misuse and overdose, etc. Trends over time.
+
+```{r}
+library(tidyverse)
+library(janitor) 
+library(gt)
+library(here) 
+library(sf)
+library(patchwork)
+library(purrr)
+```
+
+We will load in most recent data about prescriptions, along with data about gp practices and the datazones they are located in, including the population of the datazones. 
+
+```{r}
+data_january2024 <- read_csv("https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/d3eaaf84-0f3b-4fb8-9460-e33503095fbe/download/pitc202401.csv") %>% 
+  clean_names()
+
+gp_practice_jan2024 <- read_csv("https://www.opendata.nhs.scot/dataset/f23655c3-6e23-4103-a511-a80d998adb90/resource/54a6e1e3-98a3-4e78-be0d-1e6d6ebdde1d/download/practice_contactdetails_jan2024-open-data.csv") %>% 
+  clean_names() %>% 
+  select(practice_code, data_zone)
+
+datazone_pop <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_09092022.csv") %>% 
+  clean_names()
+
+datazone_pop_clean <- datazone_pop %>% 
+  filter(year == 2021,
+         sex == "All") %>% 
+  select(data_zone, all_ages) %>% 
+  rename(population=all_ages)
+
+```
+
+
+We want to look at the prescriptions of the two most common scabies medications: permethrin and malathion.
+
+```{r}
+per_mal_2024 <- data_january2024 %>% 
+  select(gp_practice, bnf_item_description,paid_quantity) %>% 
+   filter(str_detect(bnf_item_description, "PERMETH|MALATH"))
+```
+
+We're going to join the data containing datazone information with the permethrin/malathion prescription data. We want prescriptions of both combined to give us a rough estimate of general scabies medication prescriptions per population in each datazone.
+
+```{r}
+per_mal_with_gps_2024 <- per_mal_2024 %>% 
+  left_join(gp_practice_jan2024, by=c("gp_practice" = "practice_code")) %>% 
+  left_join(datazone_pop_clean, by="data_zone")
+
+```
+
+There are GP practices that have NA -> this is especially the ones allocated "99996", which are coded from a 'community pharmacy', "Unallocated" practice codes are coded 99997, "hospital" 99998. These will be useful in a temporal analysis, but not a location analysis, so for the further location analysis, we can remove them.
+
+```{r}
+per_mal_datazones_allocated_2024 <- per_mal_with_gps_2024 %>% 
+  filter(!gp_practice %in% c(99996, 99997, 99998))
+```
+
+There are still some GP practices whose names can't be matched to datazones. We will join the permethrin and malathion prescription data with data on the deprivation of datazones, using the SIMD dataset. We will specifically focusing on the deprivation quintile, and the percentage of people living in overcrowded housing. 
+
+```{r}
+scottish_index_deprivation <- 
+  st_read(here("data","SG_ScotInedMultipleDeprivation_2020/SG_SIMD_2020.shp")) %>% 
+  clean_names() 
+```
+
+```{r}
+per_mal_2024_deprivation <- per_mal_datazones_allocated_2024 %>% 
+  left_join(scottish_index_deprivation, by="data_zone") %>% 
+  select(paid_quantity, data_zone, population, quintilev2, house_o_crat) %>% 
+  mutate(scabies_prescriptions_per_1000 = (paid_quantity*1000/population))
+
+prescriptions_by_quintile <- per_mal_2024_deprivation %>%     filter(!is.na(quintilev2)) %>% 
+  group_by(quintilev2) %>% 
+  summarise(`Mean number of prescriptions` =  mean(scabies_prescriptions_per_1000, na.rm=TRUE), 
+          `Standard deviation` = sd(scabies_prescriptions_per_1000, na.rm=TRUE)) %>% 
+  rename(`SIMD quintile`=quintilev2)
+
+prescriptions_by_quintile_table <- prescriptions_by_quintile %>% 
+  gt() %>% 
+  fmt_number(decimals=1) %>% 
+  tab_header(
+    title = "Permethrin and Malathion prescriptions per 1000 people",
+    subtitle = "Averaged over SIMD quintiles")
+  
+#change so there;s 0 decimals for quintile, 1 decimal for mean and sd
+
+prescriptions_by_quintile_table
+
+```
+
+Interestingly, if we look at the above averages, it seems that the prescriptions in the LESS deprived quintiles (1 being most deprived, 5 being the least) had higher average scabies medication prescriptions. This could be due to a number of reasons:
+- missing data, especially in more deprived areas
+- lack of knowledge about scabies in more deprived area
+- better access to scabies medication in less deprived areas (as measurement of prescription is a very indirect method of tracking the disease itself).
+Additionally, the data for prescriptions have very high standard deviation. It's therefore difficult to reach any strong conclusions about deprivation and permethrin/malathion prescriptions.
+
+```{r}
+plot_prescriptions_quintile <- as.data.frame(prescriptions_by_quintile) %>% 
+  ggplot(aes(x=`SIMD quintile`, y=`Mean number of prescriptions`)) +
+  geom_col()  +
+  geom_errorbar( aes(x=`SIMD quintile`, ymin=`Mean number of prescriptions`- `Standard deviation`, ymax=`Mean number of prescriptions`+ `Standard deviation`), width=0.2, colour="black", alpha=0.8, size=0.3)
+
+plot_prescriptions_quintile
+
+#if we add the standard deviations, we see that we likely can't correlate the SIMD quintile with the mean number of prescriptions, as it's too variable.
+
+correlation <- cor.test(per_mal_2024_deprivation$quintilev2, per_mal_2024_deprivation$scabies_prescriptions_per_1000, method="spearman")
+
+correlation
+
+#probably find a better correlation calculation but shows only a very weak correlation.
+```
+
+
+```{r}
+per_mal_2024_deprivation$house_o_crat= as.numeric(sub("%", "",per_mal_2024_deprivation$house_o_crat))
+
+prescriptions_by_overcrowding_binned <- per_mal_2024_deprivation %>%
+  mutate(overcrowding_bins = cut(per_mal_2024_deprivation$house_o_crat, breaks=c(0,5,10,15,20,25,30,35,40,45), 
+labels = c("0-5%", "6-10%", "11-15%", "16-20%", "21-25%", "26-30%", "31-35%", "36-40%", "41-45%"))) %>% 
+  filter(!is.na(overcrowding_bins)) %>% 
+  group_by(overcrowding_bins) %>% 
+  summarise(prescriptions_housing = (sum(paid_quantity)/sum(population))*1000) %>% 
+  ungroup()
+
+prescriptions_by_overcrowding_binned_graph <- prescriptions_by_overcrowding_binned %>% ggplot(aes(x=overcrowding_bins, y=prescriptions_housing)) + geom_col() + 
+  labs(
+    title = "Permethrin and Malathion prescriptions by overcrowding in datazones",
+    x = "Overcrowding (%)",
+    y = "Permethrin and Malathion prescriptions per 1000 people"
+  ) +
+  theme_minimal() 
+
+prescriptions_by_overcrowding_binned_graph
+
+```
+
+When we look at prescriptions per 1000 people, we see that there is quite a significantly greater number of prescriptions in the 41-45% overcrowding datazone group. However, this doesn't account for all datazones, only those that have records of permethrin and malathion prescriptions, so further investigations are needed. Further, there isn't a strong trend in the
+
+Will also look at changes in scabies across Scotland over time (rise in scabies?)
+
+
+```{r}
+
+url = c(
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/7c487db9-f450-4319-8b18-4b825380692b/download/pitc201601.csv",
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/3def845e-c830-4b73-8e02-e42adcde5afa/download/pitc201701.csv",
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/82ef2c55-5a31-4759-ab9a-83b176e107f2/download/pitc201801.csv",
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/3bd6e3cc-b8b7-493b-b6aa-f9fcadbb05d2/download/pitc201901.csv",
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/e5c841f2-3e16-428b-97db-0798ec7a5fb4/download/pitc202001.csv",
+   "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/7722a6e6-a6b6-49ec-aa63-fdc4bc727f05/download/pitc202101.csv",
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/53a53d61-3b3b-4a12-888b-a788ce13db9c/download/pitc202201.csv",
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/53a53d61-3b3b-4a12-888b-a788ce13db9c/download/pitc202201.csv",
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/6caa7144-f0e4-4ab0-b9e4-8fa10c8edf1c/download/pitc202301.csv",
+    "https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/d3eaaf84-0f3b-4fb8-9460-e33503095fbe/download/pitc202401.csv"
+  )
+
+combined_data_tidy <- map_df(url, read_csv) %>% 
+  clean_names()
+
+```
+
+```{r}
+combined_data_tidy_clean <- combined_data_tidy %>% 
+  clean_names() %>% 
+  select(bnf_item_description,paid_quantity,hbt2014,hbt,paid_date_month) %>% 
+   filter(str_detect(bnf_item_description, "PERMETH|MALATH")) %>% 
+  mutate(hbt = coalesce(hbt2014,hbt)) %>% 
+  mutate(year=substr(as.character(paid_date_month),1,4)) %>% 
+  select(-hbt2014, -paid_date_month)
+```
+
+We will maybe want to use this data then to look at trends over the years, combine it with a lil cheeky thing about cost of living crisis maybe??? rise in deprivation?? anddd a lil spatial thing would be NICEEE, though will take AGES to render hehe.
+I'll also want to change it so the combined data doesnt have a 'paid-data-month' but just a year, so then i can combine it with population data.
+
+```{r}
+hb_population_data <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/27a72cc8-d6d8-430c-8b4f-3109a9ceadb1/download/hb2019_pop_est_14102024.csv") %>% 
+  clean_names() %>% 
+  filter(sex=="All") %>% 
+  select(year, hb, population=all_ages)
+
+scabies_over_time_pop <- combined_data_tidy_clean %>% 
+  left_join(hb_population_data) 
+```
+
+
+```{r}
+scottish_health_boards <- 
+  st_read(here("data","SG_NHS_HealthBoards_2019/SG_NHS_HealthBoards_2019.shp")) %>% 
+  clean_names() 
+```
+
+
+
+MAKE A LIL INTERACTIVE WIDGET FOR GOING OVER THE YEARS?? using shiny
+
+
+
+```{r}
+pres_datazones_spatial <- scottish_index_deprivation %>% 
+  full_join(permeth_and_mala_summed_perpop, by="data_zone") %>% 
+  filter(!st_is_empty(geometry))
+
+map_data_with_prescriptions_plot <- pres_datazones_spatial %>%
+  ggplot(aes(fill = datazone_pres_per_100)) +
+  geom_sf(color=NA) +
+  scale_fill_distiller(
+    palette = "Blues", 
+    direction = 1,  
+    name = "No. of Prescriptions/100 people in datazone") +
+      labs(title = "Number of prescriptions of scabies and malathion in datazones per 100 people", subtitle = "", fill = "No. of prescriptions") +
+  theme_void() +
+  theme(
+    plot.title = element_text(face = "bold", size = 10), 
+    plot.subtitle = element_text(size = 9), 
+    legend.title = element_text(face = "bold", size = 10)
+  )
+map_data_with_prescriptions_plot
+
+```
+
+```{r}
+pres_datazones_spatial_relevant <- pres_datazones_spatial %>% 
+  select(data_zone, quintilev2, decilev2, house_o_crat, datazone_pres_per_100) %>% 
+  filter(!is.na(datazone_pres_per_100)) 
+```
+
+```{r}
+
+test_plot <- scottish_index_deprivation %>% 
+  ggplot(aes(fill=inc_rankv2)) +
+  geom_sf() +
+  scale_fill_distiller(
+    palette = "Blues", 
+    direction = 1,  
+    name = "Income rank")
+
+test_plot
+
+```
+
+We could look at this over health board as well, though p difficult lol
+Could also look at just the major cities, i.e. edinburgh, glasgow, dundee etc and look at prescriptions at a more microscopic scale
+
+Obviously, this doesn't really show very much haha. 
+The SIMD data also contains quintiles, could look at correlation between quintiles and 
+```{r}
+#plot some kinda correlation between certain measures of inequality and the scabies prescription data
+
+```
