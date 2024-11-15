@@ -1,7 +1,8 @@
 ---
 title: "Assessment"
-output: html_document
-code_folding: show
+output: 
+  html_document:
+    code_folding: show
 date: "2024-11-01"
 ---
 
@@ -10,9 +11,11 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 ```
 
 #Data Science for Health and Biomedical Sciences Assessment
+
 ## The rise of scabies in Scotland and link to socioeconomic factors
 
 In this paper, I will be examining:
+
 - the relationship (if any) between prescriptions of permethrin and malathion and deprivation status, as measured by SIMD quintile
 - the relationship (if any) between prescriptions of permethrin and malathion and overcrowding
 - fluctuations in scabies medication prescription over time

@@ -208,6 +208,83 @@ window.buildTabsets = function(tocID) {
 };
 
 </script>
+<script>
+window.initializeCodeFolding = function(show) {
+
+  // handlers for show-all and hide all
+  $("#rmd-show-all-code").click(function() {
+    $('div.r-code-collapse').each(function() {
+      $(this).collapse('show');
+    });
+  });
+  $("#rmd-hide-all-code").click(function() {
+    $('div.r-code-collapse').each(function() {
+      $(this).collapse('hide');
+    });
+  });
+
+  // index for unique code element ids
+  var currentIndex = 1;
+
+  // select all R code blocks
+  var rCodeBlocks = $('pre.r, pre.python, pre.bash, pre.sql, pre.cpp, pre.stan, pre.julia, pre.foldable');
+  rCodeBlocks.each(function() {
+    // skip if the block has fold-none class
+    if ($(this).hasClass('fold-none')) return;
+
+    // create a collapsable div to wrap the code in
+    var div = $('<div class="collapse r-code-collapse"></div>');
+    var showThis = (show || $(this).hasClass('fold-show')) && !$(this).hasClass('fold-hide');
+    var id = 'rcode-643E0F36' + currentIndex++;
+    div.attr('id', id);
+    $(this).before(div);
+    $(this).detach().appendTo(div);
+
+    // add a show code button right above
+    var showCodeText = $('<span>' + (showThis ? 'Hide' : 'Show') + '</span>');
+    var showCodeButton = $('<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm code-folding-btn pull-right float-right"></button>');
+    showCodeButton.append(showCodeText);
+    showCodeButton
+        .attr('data-toggle', 'collapse')
+        .attr('data-bs-toggle', 'collapse') // BS5
+        .attr('data-target', '#' + id)
+        .attr('data-bs-target', '#' + id)   // BS5
+        .attr('aria-expanded', showThis)
+        .attr('aria-controls', id);
+
+    var buttonRow = $('<div class="row"></div>');
+    var buttonCol = $('<div class="col-md-12"></div>');
+
+    buttonCol.append(showCodeButton);
+    buttonRow.append(buttonCol);
+
+    div.before(buttonRow);
+
+    // show the div if necessary
+    if (showThis) div.collapse('show');
+
+    // update state of button on show/hide
+    //   * Change text
+    //   * add a class for intermediate states styling
+    div.on('hide.bs.collapse', function () {
+      showCodeText.text('Show');
+      showCodeButton.addClass('btn-collapsing');
+    });
+    div.on('hidden.bs.collapse', function () {
+      showCodeButton.removeClass('btn-collapsing');
+    });
+    div.on('show.bs.collapse', function () {
+      showCodeText.text('Hide');
+      showCodeButton.addClass('btn-expanding');
+    });
+    div.on('shown.bs.collapse', function () {
+      showCodeButton.removeClass('btn-expanding');
+    });
+
+  });
+
+}
+</script>
 <style type="text/css">.hljs-literal {
 color: #990073;
 }
@@ -331,6 +408,9 @@ display: none;
 </style>
 
 <!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
 
 
 
@@ -347,6 +427,14 @@ display: none;
 
 <div id="header">
 
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
 
 
 <h1 class="title toc-ignore">Assessment</h1>
@@ -355,13 +443,18 @@ display: none;
 </div>
 
 
-<p>#Data Science for Health and Biomedical Sciences Assessment ## The
-rise of scabies in Scotland and link to socioeconomic factors</p>
-<p>In this paper, I will be examining: - the relationship (if any)
-between prescriptions of permethrin and malathion and deprivation
-status, as measured by SIMD quintile - the relationship (if any) between
-prescriptions of permethrin and malathion and overcrowding -
-fluctuations in scabies medication prescription over time</p>
+<p>#Data Science for Health and Biomedical Sciences Assessment</p>
+<div id="the-rise-of-scabies-in-scotland-and-link-to-socioeconomic-factors" class="section level2">
+<h2>The rise of scabies in Scotland and link to socioeconomic
+factors</h2>
+<p>In this paper, I will be examining:</p>
+<ul>
+<li>the relationship (if any) between prescriptions of permethrin and
+malathion and deprivation status, as measured by SIMD quintile</li>
+<li>the relationship (if any) between prescriptions of permethrin and
+malathion and overcrowding</li>
+<li>fluctuations in scabies medication prescription over time</li>
+</ul>
 <p><em>Another alternative if this idea doesn’t work - then another idea
 would be methadone prescriptions, look at over socioeconomic factors,
 correlations with other drugs, drug misuse and overdose, etc. Trends
@@ -420,6 +513,7 @@ for the further location analysis, we can remove them.</p>
 <pre class="r"><code>per_mal_datazones_allocated_2024 &lt;- per_mal_with_gps_2024 %&gt;% 
   filter(!gp_practice %in% c(99996, 99997, 99998))</code></pre>
 </div>
+</div>
 <div id="scabies-prescriptions-in-deprivation-quintiles" class="section level2">
 <h2>Scabies prescriptions in deprivation quintiles</h2>
 <p>We will join the permethrin and malathion prescription data with data
@@ -447,20 +541,20 @@ prescriptions_by_quintile_table &lt;- prescriptions_by_quintile %&gt;%
 <div id="prescriptions-by-quintile-figure-1" class="section level2">
 <h2>Prescriptions by quintile (Figure 1)</h2>
 <pre class="r"><code>prescriptions_by_quintile_table</code></pre>
-<div id="xogbszpdcp" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#xogbszpdcp table {
+<div id="prlfnurgpm" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#prlfnurgpm table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#xogbszpdcp thead, #xogbszpdcp tbody, #xogbszpdcp tfoot, #xogbszpdcp tr, #xogbszpdcp td, #xogbszpdcp th {
+#prlfnurgpm thead, #prlfnurgpm tbody, #prlfnurgpm tfoot, #prlfnurgpm tr, #prlfnurgpm td, #prlfnurgpm th {
 border-style: none;
 }
-#xogbszpdcp p {
+#prlfnurgpm p {
 margin: 0;
 padding: 0;
 }
-#xogbszpdcp .gt_table {
+#prlfnurgpm .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -485,11 +579,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#xogbszpdcp .gt_caption {
+#prlfnurgpm .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#xogbszpdcp .gt_title {
+#prlfnurgpm .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -500,7 +594,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#xogbszpdcp .gt_subtitle {
+#prlfnurgpm .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -511,7 +605,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#xogbszpdcp .gt_heading {
+#prlfnurgpm .gt_heading {
 background-color: #FFFFFF;
 text-align: center;
 border-bottom-color: #FFFFFF;
@@ -522,12 +616,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#xogbszpdcp .gt_bottom_border {
+#prlfnurgpm .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#xogbszpdcp .gt_col_headings {
+#prlfnurgpm .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -541,7 +635,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#xogbszpdcp .gt_col_heading {
+#prlfnurgpm .gt_col_heading {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -560,7 +654,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#xogbszpdcp .gt_column_spanner_outer {
+#prlfnurgpm .gt_column_spanner_outer {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -571,13 +665,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#xogbszpdcp .gt_column_spanner_outer:first-child {
+#prlfnurgpm .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#xogbszpdcp .gt_column_spanner_outer:last-child {
+#prlfnurgpm .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#xogbszpdcp .gt_column_spanner {
+#prlfnurgpm .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
@@ -588,10 +682,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#xogbszpdcp .gt_spanner_row {
+#prlfnurgpm .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#xogbszpdcp .gt_group_heading {
+#prlfnurgpm .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -616,7 +710,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#xogbszpdcp .gt_empty_group_heading {
+#prlfnurgpm .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -630,13 +724,13 @@ border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 vertical-align: middle;
 }
-#xogbszpdcp .gt_from_md > :first-child {
+#prlfnurgpm .gt_from_md > :first-child {
 margin-top: 0;
 }
-#xogbszpdcp .gt_from_md > :last-child {
+#prlfnurgpm .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#xogbszpdcp .gt_row {
+#prlfnurgpm .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -654,7 +748,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#xogbszpdcp .gt_stub {
+#prlfnurgpm .gt_stub {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -666,7 +760,7 @@ border-right-color: #D3D3D3;
 padding-left: 5px;
 padding-right: 5px;
 }
-#xogbszpdcp .gt_stub_row_group {
+#prlfnurgpm .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -679,13 +773,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#xogbszpdcp .gt_row_group_first td {
+#prlfnurgpm .gt_row_group_first td {
 border-top-width: 2px;
 }
-#xogbszpdcp .gt_row_group_first th {
+#prlfnurgpm .gt_row_group_first th {
 border-top-width: 2px;
 }
-#xogbszpdcp .gt_summary_row {
+#prlfnurgpm .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -694,14 +788,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#xogbszpdcp .gt_first_summary_row {
+#prlfnurgpm .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #D3D3D3;
 }
-#xogbszpdcp .gt_first_summary_row.thick {
+#prlfnurgpm .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#xogbszpdcp .gt_last_summary_row {
+#prlfnurgpm .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -710,7 +804,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#xogbszpdcp .gt_grand_summary_row {
+#prlfnurgpm .gt_grand_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -719,7 +813,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#xogbszpdcp .gt_first_grand_summary_row {
+#prlfnurgpm .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -728,7 +822,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #D3D3D3;
 }
-#xogbszpdcp .gt_last_grand_summary_row_top {
+#prlfnurgpm .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -737,10 +831,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #D3D3D3;
 }
-#xogbszpdcp .gt_striped {
+#prlfnurgpm .gt_striped {
 background-color: rgba(128, 128, 128, 0.05);
 }
-#xogbszpdcp .gt_table_body {
+#prlfnurgpm .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -748,7 +842,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#xogbszpdcp .gt_footnotes {
+#prlfnurgpm .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -761,7 +855,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#xogbszpdcp .gt_footnote {
+#prlfnurgpm .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -769,7 +863,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#xogbszpdcp .gt_sourcenotes {
+#prlfnurgpm .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -782,64 +876,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#xogbszpdcp .gt_sourcenote {
+#prlfnurgpm .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#xogbszpdcp .gt_left {
+#prlfnurgpm .gt_left {
 text-align: left;
 }
-#xogbszpdcp .gt_center {
+#prlfnurgpm .gt_center {
 text-align: center;
 }
-#xogbszpdcp .gt_right {
+#prlfnurgpm .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#xogbszpdcp .gt_font_normal {
+#prlfnurgpm .gt_font_normal {
 font-weight: normal;
 }
-#xogbszpdcp .gt_font_bold {
+#prlfnurgpm .gt_font_bold {
 font-weight: bold;
 }
-#xogbszpdcp .gt_font_italic {
+#prlfnurgpm .gt_font_italic {
 font-style: italic;
 }
-#xogbszpdcp .gt_super {
+#prlfnurgpm .gt_super {
 font-size: 65%;
 }
-#xogbszpdcp .gt_footnote_marks {
+#prlfnurgpm .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#xogbszpdcp .gt_asterisk {
+#prlfnurgpm .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#xogbszpdcp .gt_indent_1 {
+#prlfnurgpm .gt_indent_1 {
 text-indent: 5px;
 }
-#xogbszpdcp .gt_indent_2 {
+#prlfnurgpm .gt_indent_2 {
 text-indent: 10px;
 }
-#xogbszpdcp .gt_indent_3 {
+#prlfnurgpm .gt_indent_3 {
 text-indent: 15px;
 }
-#xogbszpdcp .gt_indent_4 {
+#prlfnurgpm .gt_indent_4 {
 text-indent: 20px;
 }
-#xogbszpdcp .gt_indent_5 {
+#prlfnurgpm .gt_indent_5 {
 text-indent: 25px;
 }
-#xogbszpdcp .katex-display {
+#prlfnurgpm .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#xogbszpdcp div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#prlfnurgpm div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>
@@ -986,6 +1080,11 @@ $(document).ready(function () {
 </script>
 
 <!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
 
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
