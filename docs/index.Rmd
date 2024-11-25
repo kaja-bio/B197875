@@ -30,7 +30,7 @@ Scabies is a highly contagious parasitic infection, often spread in crowded livi
 ## Loading required libraries
 
 ```{r}
-pacman::p_load(knitr, tidyverse,janitor, gt, here, sf, patchwork, purrr, plotly, ggspatial)
+pacman::p_load(knitr, tidyverse,janitor, gt, here, sf, patchwork, purrr, plotly, ggspatial, cowplot)
 #a function loading in all of the libraries I use
 ```
 
@@ -137,6 +137,7 @@ However, the data for permethrin and malathion prescriptions by datazones has ve
 # The effect of Overcrowding on Scabies Prescriptions 
 
 We will also investigate the link between overcrowding, as supplied by SIMD data, and prescriptions of permethrin and malathion.
+
 ## Prescription by percentage of housing overcrowding (Figure 2)
 
 ```{r fig.align = 'center'}
@@ -169,6 +170,7 @@ When we look at prescriptions per 1000 people, we see that there is quite a sign
 
 # The rise in scabies medication prescription (2016 - 2024)
 Numerous sources have reported a rise in scabies in Scotland ([The Guardian](https://www.theguardian.com/society/2024/jan/01/doctors-report-nightmare-surge-in-scabies-across-uk), [The Herald](https://www.heraldscotland.com/news/national/uk-today/24680241.scabies-cases-rise---symptoms-treatments/), [BBC](https://www.bbc.co.uk/news/uk-scotland-highlands-islands-65645796)), but there is a lack of quantitative evidence supporting this. I thus decided to investigate the trends in scabies and malathion prescriptions in Scotland between the years 2016-2024, split up by health boards. I chose to investigate health boards rather than datazones partially because of the significant amount of data, and because he focus was on temporal rather than spatial analysis.
+
 ## Loading in datasets for January 2016 - January 2024
 
 ```{r}
@@ -245,24 +247,33 @@ ggplotly(scabies_over_time_line)
 
 ## Scabies prescriptions in different datazones, faceted by year (Figure 4)
 
-```{r fig.align = 'center', fig.width=9}
-spatial_plot <- scabies_over_time_pop %>% 
+```{r fig.align = 'center', fig.height=10}
+scabies_over_time_pop_sf <- scabies_over_time_pop %>% 
     right_join(scottish_health_boards, by = join_by(hb == hb_code)) %>%
-    st_as_sf() %>% 
-    ggplot(aes(fill = permethrin_and_malathion_per_10000)) +
-    annotation_scale(location = "tl") +
-    annotation_north_arrow(location = "br", which_north = "true") +
-    facet_wrap(~year) +
-    geom_sf(colour="black") +
-    scale_fill_viridis_c() +
-    coord_sf() +
-    theme(panel.spacing.x = unit(3, "lines")) +
-    theme_minimal() +
-    labs(title = "Scabies prescriptions in Scotland", subtitle = "Permethrin and malathion prescriptions by health board in the population (per 10,000)", fill = "Prescriptions of permethrin and malathion") 
-spatial_plot
-
-#making a facet-wrapped spatial plot of the map of Scotland with prescriptions per 10,000 people plotted, with coord_sf used to keep the height/width ratio constant when changing the width, and increasing width between panels with a 
+    st_as_sf()
+scabies_maps <- scabies_over_time_pop_sf %>%
+  split(.$year) %>% 
+  lapply(function(data) {
+    ggplot(data, aes(fill = permethrin_and_malathion_per_10000)) +
+      geom_sf(colour = "black") +
+      scale_fill_viridis_c(
+        option = "inferno", 
+        direction = -1, 
+        name = "Prescriptions of\npermethrin and malathion", 
+        limits = c(0, 2000) #added a limit because otherwise, the cowplot plots will each have different scales
+      ) +
+      ggspatial::annotation_scale(location = "tl", width_hint = 0.5) +
+      theme_minimal() +
+      labs(
+        title = paste("Year:", unique(data$year))
+      )
+  })
+plot_grid(plotlist = scabies_maps, ncol = 2)
+#When I used ggplot to plot the maps without faceting, it returned a map with overlaid axes and looked quite distorted. I tried using scales="free", but that's not supported by geom_sf. So, as in <https://stackoverflow.com/questions/44814768/mapping-different-states-in-r-using-facet-wrap>, I ended up using a library called cowplot, by plotting each map separately and then knitting them together. This came with its own issues, such as overlapping labels (so I changed to an overarching label) and the maps having different scale fill ranges, which made it hard to compare. 
+#I ended up setting limits for the scale_fill_viridis_c function before the cowplot, so as to ensure they were comparable and had the same scale.
+#I considered using ggdraw, following <https://www.geeksforgeeks.org/adding-x-and-y-axis-label-to-ggplot-grid-built-with-cowplot-in-r/>, to set an overarching title/label for the plots rather than to have the same title copied multiple times. However, I recognized that it actually achieved the same desired result to just have an Rmarkdown title.
 ```
+
 
 # Discussion (Trends Over Time)
 The data in figures 4 and 5 indicates that there has been quite a significant rise in prescriptions for scabies medication in all healthboards, especially over the last three years or so. This may be reflective of the ongoing cost-of-living crisis, with significant health inequalities between the different income strata of the UK's population ([The rise of 'Victorian Diseases' in the UK](https://www.theguardian.com/society/2024/feb/18/return-of-victorian-era-diseases-to-the-uk-scabies-measles-rickets-scurvy)). An important thing to note is also the fact that there is a shortage of scabies medications in the UK. This may skew the data and do so, unfortunately, in a way that may underestimate the severity of the issue. 
