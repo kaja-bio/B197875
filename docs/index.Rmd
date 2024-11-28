@@ -17,6 +17,8 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, cache=TRUE)
 
 # Data Science for Health and Biomedical Sciences Assessment
 
+A report using prescription data from the NHS to investigate and illustrate the spatial and temporal trends in scabies prescriptions in Scotland.
+
 # Introduction
 
 Scabies is a highly contagious parasitic infection, often spread in crowded living situations. Aside from the severe toll the skin condition can cause on both mental and physical health, severe forms of the disorder can even lead to issues such as heart disease or kidney infections ([WHO: Scabies](https://www.who.int/news-room/fact-sheets/detail/scabies)) While a rise in scabies has been reported, including outbreaks within the University of Edinburgh, little data actually exists on the rise of this surprisingly debilitating disease. I've met a lot of friends that have had scabies during their time at the university, yet there's not a lot of quantitative analysis of the data behind this. In this paper, I will be examining:
