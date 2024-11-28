@@ -78,9 +78,10 @@ per_mal_datazones_allocated_2024 <- per_mal_with_gps_2024 %>%
   filter(!gp_practice %in% c(99996, 99997, 99998))
 ```
 
-# Scabies prescriptions by Deprivation Quintiles (SIMD) {.tabset}
+# Scabies prescriptions by Deprivation Quintiles (SIMD) 
 
 We will join the permethrin and malathion prescription data with data on the deprivation of datazones using the SIMD dataset. We will specifically be focusing on the deprivation quintile and the percentage of people living in overcrowded housing. 
+
 ```{r}
 per_mal_2024_deprivation <- per_mal_datazones_allocated_2024 %>% 
   left_join(scottish_index_deprivation, by="data_zone") %>% 
@@ -92,9 +93,11 @@ prescriptions_by_quintile <- per_mal_2024_deprivation %>%
   group_by(quintilev2) %>% 
   rename(`SIMD quintile`=quintilev2) 
 #filters out quintiles without values, groups by quintile and renames quintilev2
+# tabset from: [tabset markdown source] (https://bookdown.org/yihui/rmarkdown-cookbook/html-tabs.html)
 ```
+## Prescriptions by Quintile {.tabset .tabset-fade .tabset-pills}
 
-## Prescriptions by quintile (Table 1)
+### Prescriptions by quintile (Table 1)
 
 A table showing the mean and standard deviation values of scabies prescriptions in Scotland in January 2024, grouped by SIMD quintiled.
 
@@ -113,7 +116,7 @@ prescriptions_by_quintile_table
 
 The SIMD quintiles are bands of 20%, with the 20% most deprived regions residing in the 1st SIMD quintile and the 20% least deprived residing in the 5th quintile.
 
-## Prescriptions by quintile (Figure 1)
+### Prescriptions by quintile (Figure 1)
 
 A boxplot representing the prescriptions of permethrin and malathion in Scotland by SIMD quintiles.
 
@@ -131,6 +134,8 @@ plot_prescriptions_quintile <-   as.data.frame(prescriptions_by_quintile) %>%
 #plotting the means of prescriptions by changing SIMD quintile to a factor and using a boxplot
 ggplotly(plot_prescriptions_quintile)
 ```
+
+The SIMD quintiles are bands of 20%, with the 20% most deprived regions residing in the 1st SIMD quintile and the 20% least deprived residing in the 5th quintile.
 
 ## Discusssion (Quintiles)
 
