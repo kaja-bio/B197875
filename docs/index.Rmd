@@ -27,8 +27,6 @@ Scabies is a highly contagious parasitic infection, often spread in crowded livi
 - the relationship (if any) between prescriptions of permethrin and malathion and overcrowding
 - fluctuations in scabies medication prescription over time
 
-# The relationship between scabies and measures of deprivation 
-
 ## Preparatory data handling
 
 ### Loading required libraries
@@ -80,7 +78,7 @@ per_mal_datazones_allocated_2024 <- per_mal_with_gps_2024 %>%
   filter(!gp_practice %in% c(99996, 99997, 99998))
 ```
 
-## Scabies prescriptions by Deprivation Quintiles (SIMD) {.tabset}
+# Scabies prescriptions by Deprivation Quintiles (SIMD) {.tabset}
 
 We will join the permethrin and malathion prescription data with data on the deprivation of datazones using the SIMD dataset. We will specifically be focusing on the deprivation quintile and the percentage of people living in overcrowded housing. 
 ```{r}
@@ -96,7 +94,7 @@ prescriptions_by_quintile <- per_mal_2024_deprivation %>%
 #filters out quintiles without values, groups by quintile and renames quintilev2
 ```
 
-### Prescriptions by quintile (Table 1)
+## Prescriptions by quintile (Table 1)
 
 A table showing the mean and standard deviation values of scabies prescriptions in Scotland in January 2024, grouped by SIMD quintiled.
 
@@ -115,7 +113,7 @@ prescriptions_by_quintile_table
 
 The SIMD quintiles are bands of 20%, with the 20% most deprived regions residing in the 1st SIMD quintile and the 20% least deprived residing in the 5th quintile.
 
-### Prescriptions by quintile (Figure 1)
+## Prescriptions by quintile (Figure 1)
 
 A boxplot representing the prescriptions of permethrin and malathion in Scotland by SIMD quintiles.
 
@@ -144,11 +142,11 @@ Interestingly, if we look at the above figures, it seems that the prescriptions 
 
 However, the data for permethrin and malathion prescriptions by datazones has very high standard deviations (figure 1). It's therefore difficult to reach any strong conclusions about deprivation and permethrin/malathion prescriptions in Scotland in January 2024. A significant outlier can be noted in figure 2, where a data point in the 1st SIMD quintile has nearly 6000 prescriptions per 1000 people - i.e. almost 6 prescriptions per person. This datazone is within the Greater Glasgow and Clyde area. While it may reflect some form of an outbreak or an area with high population density/likelihood of a scabies outbreak such as a prison or care home, inspection of the datazone on maps shows it mostly consists of a cemetery (<https://mapit.mysociety.org/area/158655.html>). Very likely, this is thus a typographical error.
 
-## The effect of Overcrowding on Scabies Prescriptions 
+# The effect of overcrowding on scabies prescriptions 
 
 We will also investigate the link between overcrowding, as supplied by SIMD data, and prescriptions of permethrin and malathion.
 
-### Prescription by percentage of housing overcrowding (Figure 2)
+## Prescription by percentage of housing overcrowding (Figure 2)
 
 ```{r fig.align = 'center'}
 per_mal_2024_deprivation$house_o_crat= as.numeric(sub("%", "",per_mal_2024_deprivation$house_o_crat))
@@ -174,12 +172,17 @@ ggplotly(prescriptions_by_overcrowding_binned_graph)
 ```
 Reference: ['cut' function](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/cut)
 
-### Discussion (Overcrowding)
+## Discussion (Overcrowding)
 
 When we look at prescriptions per 1000 people, we see that there is quite a significantly greater number of prescriptions in the 41-45% overcrowding datazone group. However, there isn't a strong trend in the datazones with lower levels of overcrowding. Again, we would need further data to be able to make strong statements.
 
-# The rise in scabies medication prescription over time (Jan 2016 - 2024)
+# The rise in scabies medication prescription over time 
+
+## Introduction
+
 Numerous sources have reported a rise in scabies in Scotland ([The Guardian](https://www.theguardian.com/society/2024/jan/01/doctors-report-nightmare-surge-in-scabies-across-uk), [The Herald](https://www.heraldscotland.com/news/national/uk-today/24680241.scabies-cases-rise---symptoms-treatments/), [BBC](https://www.bbc.co.uk/news/uk-scotland-highlands-islands-65645796)), but there is a lack of quantitative evidence supporting this. I thus decided to investigate the trends in scabies and malathion prescriptions in Scotland between the years 2016-2024, split up by health boards. I chose to investigate health boards rather than datazones partially because of the significant amount of data, and because he focus was on temporal rather than spatial analysis. I chose 2016-2024 as it represented 8 years of some of the most recent data, centered around January because scabies is typically more common in winter. It would be interesting, in further study, to see whether there are spikes in scabies prescriptions during the winter months, and thus do a smaller-scale temporal analysis.
+
+## Preparatory Data Handling
 
 ### Loading in datasets for January 2016 - January 2024
 
@@ -240,7 +243,7 @@ scabies_over_time_pop <- scabies_over_years %>%
 ```
 Reference: ['complete' function](https://tidyr.tidyverse.org/reference/complete.html)
 
-### Scabies prescriptions in different datazones over time (Figure 3)
+## Scabies prescriptions in different datazones over time (Figure 3)
 
 ```{r fig.align = 'center'}
 scabies_over_time_line <- scabies_over_time_pop %>% 
@@ -256,7 +259,7 @@ scabies_over_time_line <- scabies_over_time_pop %>%
 ggplotly(scabies_over_time_line)
 ```
 
-### Scabies prescriptions in different datazones, faceted by year (Figure 4)
+## Scabies prescriptions in different datazones, faceted by year (Figure 4)
 
 ```{r fig.align = 'center', fig.height=10}
 scabies_over_time_pop_sf <- scabies_over_time_pop %>% 
