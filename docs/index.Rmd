@@ -305,11 +305,11 @@ The current report has focused only on data from one month (January) over the ye
 I've used generative AI (chatGPT) to check over code during the debugging process. This was mainly when I was attempting to create 'overcrowding bins' for the data and kept getting errors because I was trying to use the 'cut' function wrong. I also got some errors during rendering, which were because it turned out I had accidentally left a quotation mark without closing it when editing the code and then tried to knit without running.
 
 # References
-Boseley, S. (2024, February 18). Return of Victorian-era diseases to the UK: Scabies, measles, rickets, scurvy. The Guardian. Retrieved from https://www.theguardian.com/society/2024/feb/18/return-of-victorian-era-diseases-to-the-uk-scabies-measles-rickets-scurvy
-World Health Organization. (n.d.). Scabies. Retrieved November 24, 2024, from https://www.who.int/news-room/fact-sheets/detail/scabies
-Campbell, D. (2024, January 1). Doctors report “nightmare” surge in scabies across UK. The Guardian. Retrieved from https://www.theguardian.com/society/2024/jan/01/doctors-report-nightmare-surge-in-scabies-across-uk
-Herald Scotland. (2024, January 1). Scabies cases on the rise: Symptoms and treatments. Retrieved from https://www.heraldscotland.com/news/national/uk-today/24680241.scabies-cases-rise---symptoms-treatments/
-BBC News. (2023, May 20). Scabies cases rising across the Highlands and Islands. Retrieved from https://www.bbc.co.uk/news/uk-scotland-highlands-islands-65645796
+- Boseley, S. (2024, February 18). Return of Victorian-era diseases to the UK: Scabies, measles, rickets, scurvy. The Guardian. Retrieved from https://www.theguardian.com/society/2024/feb/18/return-of-victorian-era-diseases-to-the-uk-scabies-measles-rickets-scurvy
+- World Health Organization. (n.d.). Scabies. Retrieved November 24, 2024, from https://www.who.int/news-room/fact-sheets/detail/scabies
+- Campbell, D. (2024, January 1). Doctors report “nightmare” surge in scabies across UK. The Guardian. Retrieved from https://www.theguardian.com/society/2024/jan/01/doctors-report-nightmare-surge-in-scabies-across-uk
+- Herald Scotland. (2024, January 1). Scabies cases on the rise: Symptoms and treatments. Retrieved from https://www.heraldscotland.com/news/national/uk-today/24680241.scabies-cases-rise---symptoms-treatments/
+- BBC News. (2023, May 20). Scabies cases rising across the Highlands and Islands. Retrieved from https://www.bbc.co.uk/news/uk-scotland-highlands-islands-65645796
 
 
 
