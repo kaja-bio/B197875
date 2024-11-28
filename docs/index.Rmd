@@ -19,41 +19,44 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, cache=TRUE)
 
 # Introduction
 
-Scabies is a highly contagious parasitic infection, often spread in crowded living situations. Aside from the severe toll the skin condition can cause on both mental and physical health, severe forms of the disorder can even lead to issues such as heart disease or kidney infections ([WHO: Scabies](https://www.who.int/news-room/fact-sheets/detail/scabies)) While a rise in scabies has been reported, including outbreaks within the University of Edinburgh, little data actually exists on the rise of this surprisingly debilitating disease. Although I've met a lot of friends that have had scabies during their time at the university, there's not a lot of quantitative analysis of the data behind this. In this paper, I will be examining:
+Scabies is a highly contagious parasitic infection, often spread in crowded living situations. Aside from the severe toll the skin condition can cause on both mental and physical health, severe forms of the disorder can even lead to issues such as heart disease or kidney infections ([WHO: Scabies](https://www.who.int/news-room/fact-sheets/detail/scabies)) While a rise in scabies has been reported, including outbreaks within the University of Edinburgh, little data actually exists on the rise of this surprisingly debilitating disease. I've met a lot of friends that have had scabies during their time at the university, yet there's not a lot of quantitative analysis of the data behind this. In this paper, I will be examining:
 
 - the relationship (if any) between prescriptions of permethrin and malathion, the two most commonly prescribed medications for scabies, and deprivation status, as measured by SIMD quintile
 - the relationship (if any) between prescriptions of permethrin and malathion and overcrowding
 - fluctuations in scabies medication prescription over time
 
-# The rise of scabies in Scotland and link to socioeconomic factors
+# The relationship between scabies and measures of deprivation 
 
-## Loading required libraries
+## Preparatory data handling
+
+### Loading required libraries
 
 ```{r}
 pacman::p_load(knitr, tidyverse,janitor, gt, here, sf, patchwork, purrr, plotly, ggspatial, cowplot)
 #a function loading in all of the libraries I use
 ```
 
-## Data 
-```{r class.source = 'fold-hide', results = 'hide'}
+### Data 
+```{r}
 data_january2024 <- read_csv("https://www.opendata.nhs.scot/dataset/84393984-14e9-4b0d-a797-b288db64d088/resource/d3eaaf84-0f3b-4fb8-9460-e33503095fbe/download/pitc202401.csv") %>% 
   clean_names()
 
 gp_practice_jan2024 <- read_csv("https://www.opendata.nhs.scot/dataset/f23655c3-6e23-4103-a511-a80d998adb90/resource/54a6e1e3-98a3-4e78-be0d-1e6d6ebdde1d/download/practice_contactdetails_jan2024-open-data.csv") %>% 
   clean_names() %>% 
-  select(practice_code, data_zone)
+  select(practice_code, data_zone) #the gp practice data will give us the data zones of the gp practices mentioned in the January 202
 
 datazone_pop_clean <- read_csv("https://www.opendata.nhs.scot/dataset/7f010430-6ce1-4813-b25c-f7f335bdc4dc/resource/c505f490-c201-44bd-abd1-1bd7a64285ee/download/dz2011-pop-est_09092022.csv") %>% 
   clean_names() %>% 
   filter(year == 2021,
          sex == "All") %>% 
-  select(data_zone, population = all_ages)
+  select(data_zone, population = all_ages) #this datazone will later be used to give us the most recent population information available for each datazone
 
 scottish_index_deprivation <-st_read(here("data","SG_ScotInedMultipleDeprivation_2020/SG_SIMD_2020.shp"), quiet = TRUE) %>% 
-  clean_names() 
+  clean_names() #the SIMD data includes the most recent data about deprivation in Scotland over the different datazones. We will be focusing on the data of the SIMD quintiles, a measure using different variables to categorise each datazone 1-5 based on perceived deprivation, and on house_o_crat, a measure of the percentage of overcrowding in the datazones.
+#The last dataset is from [Spatial SIMD data](https://spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/02866b0b-66e5-46ab-9b1c-d433dc3c2fae).
 ```
 
-## Selecting and filtering scabies medication data
+### Selecting and filtering scabies medication data
 
 ```{r}
 per_mal_2024 <- data_january2024 %>% 
@@ -75,7 +78,7 @@ per_mal_datazones_allocated_2024 <- per_mal_with_gps_2024 %>%
   filter(!gp_practice %in% c(99996, 99997, 99998))
 ```
 
-# Scabies prescriptions by Deprivation Quintiles (SIMD) {.tabset}
+## Scabies prescriptions by Deprivation Quintiles (SIMD) {.tabset}
 
 We will join the permethrin and malathion prescription data with data on the deprivation of datazones using the SIMD dataset. We will specifically be focusing on the deprivation quintile and the percentage of people living in overcrowded housing. 
 ```{r}
@@ -89,25 +92,30 @@ prescriptions_by_quintile <- per_mal_2024_deprivation %>%
   group_by(quintilev2) %>% 
   rename(`SIMD quintile`=quintilev2) 
 #filters out quintiles without values, groups by quintile and renames quintilev2
+```
+
+### Prescriptions by quintile (Table 1)
+
+A table showing the mean and standard deviation values of scabies prescriptions in Scotland in January 2024, grouped by SIMD quintiled.
+
+```{r  fig.align = 'center'}
 prescriptions_by_quintile_table <- prescriptions_by_quintile  %>% 
     summarise(`Mean number of prescriptions` =  mean(scabies_prescriptions_per_1000, na.rm=TRUE), 
           `Standard deviation` = sd(scabies_prescriptions_per_1000, na.rm=TRUE)) %>% 
   gt() %>% 
   fmt_number(columns = c(`Mean number of prescriptions`, `Standard deviation`), decimals = 1) %>% 
-  fmt_number(columns = c(`SIMD quintile`), decimals = 0) %>%
   tab_header(
     title = "Permethrin and Malathion prescriptions",
     subtitle = "Averaged over SIMD quintiles")
 #creating a table that groups the data by SIMD quintile and calculates the mean and standard deviation of prescriptions per 1,000 people.
-```
-
-## Prescriptions by quintile (Table 1)
-
-```{r  fig.align = 'center'}
 prescriptions_by_quintile_table
 ```
 
-## Prescriptions by quintile (Figure 1)
+The SIMD quintiles are bands of 20%, with the 20% most deprived regions residing in the 1st SIMD quintile and the 20% least deprived residing in the 5th quintile.
+
+### Prescriptions by quintile (Figure 1)
+
+A boxplot representing the prescriptions of permethrin and malathion in Scotland by SIMD quintiles.
 
 ```{r fig.align = 'center'}
 plot_prescriptions_quintile <-   as.data.frame(prescriptions_by_quintile) %>% 
@@ -118,13 +126,13 @@ plot_prescriptions_quintile <-   as.data.frame(prescriptions_by_quintile) %>%
   labs(title="Scabies prescriptions by Deprivation Quintile",
        subtitle = "January 2024",
        caption = "Data from SIMD (Scottish Index of Deprivation)",
-       y = "Scabies prescriptions per 1,000 people") +
+       y = "Permethrin and Malathion prescriptions per 1,000 people") +
   theme_minimal()
 #plotting the means of prescriptions by changing SIMD quintile to a factor and using a boxplot
 ggplotly(plot_prescriptions_quintile)
 ```
 
-# Discusssion (Quintiles)
+## Discusssion (Quintiles)
 
 Interestingly, if we look at the above figures, it seems that the prescriptions in the **less** deprived quintiles (1 being most deprived, 5 being the least) had **higher** average scabies medication prescriptions. This could be due to a number of reasons, such as:
 
@@ -134,11 +142,11 @@ Interestingly, if we look at the above figures, it seems that the prescriptions 
 
 However, the data for permethrin and malathion prescriptions by datazones has very high standard deviations (figure 1). It's therefore difficult to reach any strong conclusions about deprivation and permethrin/malathion prescriptions in Scotland in January 2024. A significant outlier can be noted in figure 2, where a data point in the 1st SIMD quintile has nearly 6000 prescriptions per 1000 people - i.e. almost 6 prescriptions per person. This datazone is within the Greater Glasgow and Clyde area. While it may reflect some form of an outbreak or an area with high population density/likelihood of a scabies outbreak such as a prison or care home, inspection of the datazone on maps shows it mostly consists of a cemetery (<https://mapit.mysociety.org/area/158655.html>). Very likely, this is thus a typographical error.
 
-# The effect of Overcrowding on Scabies Prescriptions 
+## The effect of Overcrowding on Scabies Prescriptions 
 
 We will also investigate the link between overcrowding, as supplied by SIMD data, and prescriptions of permethrin and malathion.
 
-## Prescription by percentage of housing overcrowding (Figure 2)
+### Prescription by percentage of housing overcrowding (Figure 2)
 
 ```{r fig.align = 'center'}
 per_mal_2024_deprivation$house_o_crat= as.numeric(sub("%", "",per_mal_2024_deprivation$house_o_crat))
@@ -150,12 +158,12 @@ labels = c("0-5%", "6-10%", "11-15%", "16-20%", "21-25%", "26-30%", "31-35%", "3
   group_by(overcrowding_bins) %>% 
   summarise(prescriptions_housing = (sum(paid_quantity)/sum(population))*1000) %>% 
   ungroup()
-#we create a new column using house_o_crat, the variable for percentage of housing, and create breaks each 5%, then assign labels to each of these distinct bins before filtering by any NA values. We group by these bins and calculate a value for prescriptions per 1,000 in each of the bins.
+#we create a new column using house_o_crat, the variable for percentage of housing, and create breaks each 5% using the cut function and assign labels to each of these distinct bins, before filtering by any NA values. We group by these bins and calculate a value for prescriptions per 1,000 in each of the bins.
 prescriptions_by_overcrowding_binned_graph <- prescriptions_by_overcrowding_binned %>% ggplot(aes(x=overcrowding_bins, y=prescriptions_housing, fill=overcrowding_bins)) + 
   geom_col() +
   labs(title = "Permethrin and Malathion prescriptions by overcrowding in datazones",
     x = "Overcrowding (%)",
-    y = "Permethrin and Malathion prescriptions per 1000 people",
+    y = "Permethrin and Malathion prescriptions per 1,000 people",
     fill = "Overcrowding bins") +
   theme_minimal() + 
   scale_fill_brewer(palette="Reds")
@@ -164,14 +172,14 @@ ggplotly(prescriptions_by_overcrowding_binned_graph)
 ```
 Reference: ['cut' function](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/cut)
 
-## Discussion (Overcrowding)
+### Discussion (Overcrowding)
 
 When we look at prescriptions per 1000 people, we see that there is quite a significantly greater number of prescriptions in the 41-45% overcrowding datazone group. However, there isn't a strong trend in the datazones with lower levels of overcrowding. Again, we would need further data to be able to make strong statements.
 
-# The rise in scabies medication prescription (2016 - 2024)
-Numerous sources have reported a rise in scabies in Scotland ([The Guardian](https://www.theguardian.com/society/2024/jan/01/doctors-report-nightmare-surge-in-scabies-across-uk), [The Herald](https://www.heraldscotland.com/news/national/uk-today/24680241.scabies-cases-rise---symptoms-treatments/), [BBC](https://www.bbc.co.uk/news/uk-scotland-highlands-islands-65645796)), but there is a lack of quantitative evidence supporting this. I thus decided to investigate the trends in scabies and malathion prescriptions in Scotland between the years 2016-2024, split up by health boards. I chose to investigate health boards rather than datazones partially because of the significant amount of data, and because he focus was on temporal rather than spatial analysis.
+# The rise in scabies medication prescription over time (Jan 2016 - 2024)
+Numerous sources have reported a rise in scabies in Scotland ([The Guardian](https://www.theguardian.com/society/2024/jan/01/doctors-report-nightmare-surge-in-scabies-across-uk), [The Herald](https://www.heraldscotland.com/news/national/uk-today/24680241.scabies-cases-rise---symptoms-treatments/), [BBC](https://www.bbc.co.uk/news/uk-scotland-highlands-islands-65645796)), but there is a lack of quantitative evidence supporting this. I thus decided to investigate the trends in scabies and malathion prescriptions in Scotland between the years 2016-2024, split up by health boards. I chose to investigate health boards rather than datazones partially because of the significant amount of data, and because he focus was on temporal rather than spatial analysis. I chose 2016-2024 as it represented 8 years of some of the most recent data, centered around January because scabies is typically more common in winter. It would be interesting, in further study, to see whether there are spikes in scabies prescriptions during the winter months, and thus do a smaller-scale temporal analysis.
 
-## Loading in datasets for January 2016 - January 2024
+### Loading in datasets for January 2016 - January 2024
 
 ```{r}
 url = c(
@@ -198,12 +206,13 @@ scottish_health_boards <- st_read(here("data","SG_NHS_HealthBoards_2019/SG_NHS_H
   clean_names()
 ```
 Reference: ['map_df' function](https://www.rdocumentation.org/packages/tidytable/versions/0.10.2/topics/map_df.)
-## Selecting and filtering relevant data for temporal analysis
+
+### Selecting and filtering relevant data for temporal analysis
 
 When we've mapped the data from the January of successive years 2016-2024 into a dataframe, we're going to select the relevant columns, filter out scabies medication, clean up the data and use the function 'complete' from tidyr to add 0 values to any hb/year pairs that have no data about scabies prescriptions (to prevent loss of data when merging with spatial data later).
 
 ```{r}
-combined_data_tidy_clean <- combined_data_tidy %>% 
+scabies_over_years <- combined_data_tidy %>% 
   clean_names() %>% 
   select(bnf_item_description,paid_quantity,hbt2014,hbt,paid_date_month) %>% 
    filter(str_detect(bnf_item_description, "PERMETH|MALATH")) %>% 
@@ -214,10 +223,10 @@ combined_data_tidy_clean <- combined_data_tidy %>%
 ```
 Reference: ['coalesce' dplyr](https://dplyr.tidyverse.org/reference/coalesce.html)
 
-## Joining prescription data with population data and calculating prescriptions by 10,000 per datazone
+### Joining prescription data with population data and calculating prescriptions by 10,000 per datazone
 
 ```{r}
-scabies_over_time_pop <- combined_data_tidy_clean %>% 
+scabies_over_time_pop <- scabies_over_years %>% 
   mutate(join_year = if_else(year == "2024", "2023", year)) %>% 
   left_join(hb_population_data %>% rename(join_year = year), by = join_by(hb, join_year)) %>% 
   mutate(paid_per_10000 = paid_quantity*10000 / population) %>% 
@@ -229,7 +238,7 @@ scabies_over_time_pop <- combined_data_tidy_clean %>%
 ```
 Reference: ['complete' function](https://tidyr.tidyverse.org/reference/complete.html)
 
-## Scabies prescriptions in different datazones over time (Figure 3)
+### Scabies prescriptions in different datazones over time (Figure 3)
 
 ```{r fig.align = 'center'}
 scabies_over_time_line <- scabies_over_time_pop %>% 
@@ -245,7 +254,7 @@ scabies_over_time_line <- scabies_over_time_pop %>%
 ggplotly(scabies_over_time_line)
 ```
 
-## Scabies prescriptions in different datazones, faceted by year (Figure 4)
+### Scabies prescriptions in different datazones, faceted by year (Figure 4)
 
 ```{r fig.align = 'center', fig.height=10}
 scabies_over_time_pop_sf <- scabies_over_time_pop %>% 
@@ -275,17 +284,17 @@ plot_grid(plotlist = scabies_maps, ncol = 2)
 ```
 
 
-# Discussion (Trends Over Time)
+## Discussion (Trends Over Time)
 The data in figures 4 and 5 indicates that there has been quite a significant rise in prescriptions for scabies medication in all healthboards, especially over the last three years or so. This may be reflective of the ongoing cost-of-living crisis, with significant health inequalities between the different income strata of the UK's population ([The rise of 'Victorian Diseases' in the UK](https://www.theguardian.com/society/2024/feb/18/return-of-victorian-era-diseases-to-the-uk-scabies-measles-rickets-scurvy)). An important thing to note is also the fact that there is a shortage of scabies medications in the UK. This may skew the data and do so, unfortunately, in a way that may underestimate the severity of the issue. 
 
 # Further Study
-The current report has focused only on data from one month (January) over the years 2016-2024. This doesn't reflect season changes in scabies prescriptions, and could be extended to include multiple months over the years. Further, a significant limitation I've touched upon is that while the data reflects an upwards trend in prescriptions for treatment of scabies, prescriptions are only a correlate of actual cases of scabies and may not reflect all instances of the condition, especially untreated scabies cases. Additionally, the prescription data may have some inaccuracies in its reporting, as has already been potentially mentioned in regards to the outlier in figure 2. Aside from expanding the temporal analysis to include more 
+The current report has focused only on data from one month (January) over the years 2016-2024. This doesn't reflect season changes in scabies prescriptions, and could be extended to include multiple months over the years. Further, a significant limitation I've touched upon is that while the data reflects an upwards trend in prescriptions for treatment of scabies, prescriptions are only a correlate of actual cases of scabies and may not reflect all instances of the condition, especially untreated scabies cases. Additionally, the prescription data may have some inaccuracies in its reporting, as has already been potentially mentioned in regards to the outlier in figure 2. Aside from expanding the temporal analysis to include more months, we could also attempt to extend it over the years, and expand the spatial analysis from health boards to datazones. 
 
 # A statement on generative AI
 
 I've used generative AI (chatGPT) to check over code during the debugging process. This was mainly when I was attempting to create 'overcrowding bins' for the data and kept getting errors because I was trying to use the 'cut' function wrong. I also got some errors during rendering, which were because it turned out I had accidentally left a quotation mark without closing it when editing the code and then tried to knit without running.
 
-## References
+# References
 Boseley, S. (2024, February 18). Return of Victorian-era diseases to the UK: Scabies, measles, rickets, scurvy. The Guardian. Retrieved from https://www.theguardian.com/society/2024/feb/18/return-of-victorian-era-diseases-to-the-uk-scabies-measles-rickets-scurvy
 World Health Organization. (n.d.). Scabies. Retrieved November 24, 2024, from https://www.who.int/news-room/fact-sheets/detail/scabies
 Campbell, D. (2024, January 1). Doctors report “nightmare” surge in scabies across UK. The Guardian. Retrieved from https://www.theguardian.com/society/2024/jan/01/doctors-report-nightmare-surge-in-scabies-across-uk
